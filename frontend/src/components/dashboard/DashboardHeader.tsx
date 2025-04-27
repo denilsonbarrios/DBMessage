@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { CalendarRange } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -12,21 +10,12 @@ import { DateRange } from "react-day-picker";
 interface DashboardHeaderProps {
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  selectedMonth: string;
-  onMonthChange: (month: string) => void;
 }
 
 const DashboardHeader = ({ 
   dateRange,
-  onDateRangeChange,
-  selectedMonth,
-  onMonthChange
+  onDateRangeChange
 }: DashboardHeaderProps) => {
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-
   return (
     <header className="flex flex-col space-y-4 md:space-y-0 md:flex-row justify-between items-start md:items-center gap-4 mb-6">
       <div>
@@ -35,19 +24,6 @@ const DashboardHeader = ({
       </div>
       
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={selectedMonth} onValueChange={onMonthChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o mês" />
-          </SelectTrigger>
-          <SelectContent>
-            {months.map((month, index) => (
-              <SelectItem key={index} value={String(index)}>
-                {month}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -89,4 +65,3 @@ const DashboardHeader = ({
 };
 
 export default DashboardHeader;
-

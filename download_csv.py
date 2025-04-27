@@ -81,9 +81,23 @@ async def run(playwright: Playwright):
             now = datetime.now()
             formatted_time = now.strftime('%Y-%m-%d %H:%M:%S')
             print(f"Exportação realizada com sucesso em {formatted_time}")
+            await context.close()
+            await browser.close()
+            # Aguardar 1 horas antes da próxima execução
+#            await asyncio.sleep(1 * 60 * 60)
+            await asyncio.sleep(20)
+            browser = await playwright.chromium.launch(headless=True)
+            context = await browser.new_context(accept_downloads=True)
+            page = await context.new_page()
 
-            # Aguardar 12 horas antes da próxima execução
-            await asyncio.sleep(12 * 60 * 60)
+            await page.goto("https://bebedouro-saude.ids.inf.br/bebedouro/")
+            await page.get_by_placeholder("Informe seu operador ou C.P.F.").fill("painel.esf")
+            await page.get_by_placeholder("Informe sua senha").fill("painel@123")
+            await page.get_by_role("button", name="Acessar").click()
+            await page.get_by_role("button", name=" Confirmar").click()
+            print("Login realizado com sucesso")
+            await page.wait_for_load_state('load')
+
 
     except Exception as e:
         print(f"Erro no processo principal: {e}")

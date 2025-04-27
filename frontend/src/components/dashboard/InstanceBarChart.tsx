@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +6,7 @@ interface InstanceData {
   name: string;
   importados: number;
   enviados: number;
+  second_sent: number;
 }
 
 interface InstanceBarChartProps {
@@ -48,6 +48,12 @@ const InstanceBarChart = ({ data }: InstanceBarChartProps) => {
               dataKey="enviados" 
               fill="#25D366" 
               name="Enviados" 
+              radius={[3, 3, 0, 0]} 
+            />
+            <Bar 
+              dataKey="second_sent" 
+              fill="#075E54" 
+              name="Segundas Enviadas" 
               radius={[3, 3, 0, 0]} 
             />
           </BarChart>

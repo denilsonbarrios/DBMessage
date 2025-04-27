@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -13,8 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 interface InstanceData {
   id: string;
   name: string;
+  number: string;
+  connectionStatus: string;
   importados: number;
   enviados: number;
+  second_sent: number;
 }
 
 interface InstancesTableProps {
@@ -32,8 +34,10 @@ const InstancesTable = ({ data }: InstancesTableProps) => {
           <TableHeader>
             <TableRow>
               <TableHead>Instância</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Importados</TableHead>
               <TableHead className="text-right">Enviados</TableHead>
+              <TableHead className="text-right">Segundas Enviadas</TableHead>
               <TableHead className="text-right">Taxa de Sucesso</TableHead>
             </TableRow>
           </TableHeader>
@@ -42,12 +46,15 @@ const InstancesTable = ({ data }: InstancesTableProps) => {
               const successRate = instance.importados > 0 
                 ? ((instance.enviados / instance.importados) * 100).toFixed(1) 
                 : '0.0';
+              const status = instance.connectionStatus === 'open' ? 'Online' : 'Offline';
                 
               return (
                 <TableRow key={instance.id}>
                   <TableCell className="font-medium">{instance.name}</TableCell>
+                  <TableCell>{status}</TableCell>
                   <TableCell className="text-right">{instance.importados.toLocaleString()}</TableCell>
                   <TableCell className="text-right">{instance.enviados.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{instance.second_sent.toLocaleString()}</TableCell>
                   <TableCell className="text-right">{successRate}%</TableCell>
                 </TableRow>
               );
