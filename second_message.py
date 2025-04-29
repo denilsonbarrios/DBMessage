@@ -37,7 +37,7 @@ def send_second_messages():
     
     cursor.execute('''
         SELECT id, nome_usuario, data_agendamento, horario, nome_profissional, cbo_profissional,
-               razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token
+               razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token,logradouro,complemento_unidade, numero_unidade,municipio, bairro
         FROM appointments a
         JOIN instance_mapping im ON a.instance_id = im.instance_id
         WHERE second_message_date = ? AND second_message_sent = 'PENDENTE'
@@ -48,7 +48,7 @@ def send_second_messages():
     for appt in appointments:
         (
             id, nome_usuario, data_agendamento, horario, nome_profissional, cbo_profissional,
-            razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token
+            razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token,logradouro,numero_unidade,bairro
         ) = appt
         
         phone = format_phone(telefone_celular) or format_phone(telefone) or format_phone(telefone_contato)
@@ -63,7 +63,8 @@ def send_second_messages():
             f"Lembrete: sua consulta está marcada para {data_agendamento} às {horario} "
             f"com {nome_profissional.upper()}, {cbo_profissional.upper()}.\n\n"
             f"Podemos confirmar sua presença?\n\n"
-            f"LOCAL DE ATENDIMENTO: {razao_social}, {municipio}."
+            f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
+            f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
         )
         
         second_message_status = 'ENVIADO' if send_whatsapp_message(phone, message, instance_name, token) else 'FALHA'

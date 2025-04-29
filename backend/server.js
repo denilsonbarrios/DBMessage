@@ -23,7 +23,7 @@ const db = new sqlite3.Database('../whatsapp_messages.db', (err) => {
 const whatsappApi = axios.create({
   baseURL: 'http://localhost:8081',
   headers: {
-    'apikey': '3A0C6E4B89B9-4625-8FAB-487529276421'
+    'apikey': '429683C4C977415CAAFCCE10F7D57E11'
   }
 });
 

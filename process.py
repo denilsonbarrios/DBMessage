@@ -273,10 +273,12 @@ def insert_data_to_db(data):
                 
                 mensagem = (
                     f"Olá, {nome}, Sou a Assistente Virtual de Agendamentos da Secretaria Municipal de Saúde de Bebedouro.\n\n"
-                    f"Lembrete: sua consulta está marcada para {data} às {horario} "
-                    f"com {profissional}, {especialidade}.\n\n"
+                    f"Lembrete: sua consulta está marcada para {data} às {horario} \n\n"
+                    f"com {profissional}, {especialidade.upper()}.\n\n"
                     f"Podemos confirmar sua presença?\n\n"
-                    f"LOCAL DE ATENDIMENTO: {razao_social}, {municipio}."
+                    f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
+                    f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
+
                 )
                 
                 second_message_status = 'ENVIADO' if send_whatsapp_message(formatted_phone, mensagem, instance_name, token) else 'FALHA'
@@ -291,8 +293,9 @@ def insert_data_to_db(data):
                 print(f"Inclusão a mais de 4 dias da second_message_date ({days_difference} dias) para {nome}, enviando primeira mensagem.")
                 mensagem = (
                     f"Olá, {nome}, Sou a Assistente Virtual de Agendamentos da Secretaria Municipal de Saude de Bebedouro.\n\n"
-                    f"Estamos entrando em contato para confirmar o seu agendamento do dia {data} às {horario} com o {profissional}, {especialidade}.\n\n"
-                    f"LOCAL DE ATENDIMENTO: {razao_social}, Rua {logradouro} - {numero_unidade}, {bairro}, {municipio}"
+                    f"Estamos entrando em contato para confirmar o seu agendamento do dia {data} às {horario} com o {profissional}, {especialidade.upper()}.\n\n"
+                    f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
+                    f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
                 )
                 
                 first_message_status = 'ENVIADO' if send_whatsapp_message(formatted_phone, mensagem, instance_name, token) else 'FALHA'

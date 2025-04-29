@@ -84,8 +84,8 @@ async def run(playwright: Playwright):
             await context.close()
             await browser.close()
             # Aguardar 1 horas antes da próxima execução
-            await asyncio.sleep(1 * 60 * 60)
-#            await asyncio.sleep(20)
+#            await asyncio.sleep(1 * 60 * 60)
+            await asyncio.sleep(20)
             browser = await playwright.chromium.launch(headless=True)
             context = await browser.new_context(accept_downloads=True)
             page = await context.new_page()

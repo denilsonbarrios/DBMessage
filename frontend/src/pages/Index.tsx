@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ChartBar, CalendarCheck, Users, MessageSquare } from 'lucide-react';
+import { ChartBar, CalendarCheck, Users, MessageSquare, Plus } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import StatisticCard from '@/components/dashboard/StatisticCard';
 import InstanceBarChart from '@/components/dashboard/InstanceBarChart';
 import SuccessRateChart from '@/components/dashboard/SuccessRateChart';
 import InstancesTable from '@/components/dashboard/InstancesTable';
 import { DateRange } from 'react-day-picker';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface InstanceData {
   id: string;
@@ -35,14 +39,13 @@ interface AppointmentStats {
 }
 
 const Index = () => {
-  // Definir o dateRange inicial como o mês completo atual (01/04/2025 a 30/04/2025)
-  const currentDate = new Date(2025, 3, 26); // 26/04/2025
+  const currentDate = new Date(2025, 3, 26);
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: firstDayOfMonth, // 01/04/2025
-    to: lastDayOfMonth,    // 30/04/2025
+    from: firstDayOfMonth,
+    to: lastDayOfMonth,
   });
   const [instances, setInstances] = useState<InstanceData[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -56,7 +59,15 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para formatar data no formato DD/MM/YYYY
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    us_at: '',
+    instance_id: '',
+    instance_name: '',
+    token: ''
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+
   const formatDate = (date?: Date): string => {
     if (!date) return '';
     const day = String(date.getDate()).padStart(2, '0');
@@ -65,12 +76,10 @@ const Index = () => {
     return `${day}/${month}/${year}`;
   };
 
-  // Buscar dados da API
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Buscar instâncias
       const instancesResponse = await fetch(`http://localhost:8182/instances`);
       if (!instancesResponse.ok) {
         throw new Error(`Erro ao buscar instâncias: ${instancesResponse.statusText}`);
@@ -78,7 +87,6 @@ const Index = () => {
       const instancesData = await instancesResponse.json();
       console.log('Instâncias recebidas:', instancesData);
 
-      // Buscar métricas de agendamentos por instância
       const params = new URLSearchParams();
       if (dateRange?.from) params.append('data_agendamento_start', formatDate(dateRange.from));
       if (dateRange?.to) params.append('data_agendamento_end', formatDate(dateRange.to));
@@ -90,7 +98,6 @@ const Index = () => {
       const appointmentsStatsData: AppointmentStats[] = await appointmentsStatsResponse.json();
       console.log('Métricas de agendamentos recebidas:', appointmentsStatsData);
 
-      // Combinar instâncias com métricas
       const combinedInstances = instancesData.map((instance: { id: string, name: string, number: string, connectionStatus: string }) => {
         const instanceStats = appointmentsStatsData.find(stats => stats.instance_id === instance.id) || {
           instance_id: instance.id,
@@ -110,7 +117,6 @@ const Index = () => {
       });
       setInstances(combinedInstances);
 
-      // Buscar estatísticas gerais
       const statsResponse = await fetch(`http://localhost:8182/stats?${params}`);
       if (!statsResponse.ok) {
         throw new Error(`Erro ao buscar estatísticas: ${statsResponse.statusText}`);
@@ -126,21 +132,124 @@ const Index = () => {
     }
   };
 
-  // Buscar dados ao carregar e quando dateRange mudar
+  // Atualizar dados inicialmente e a cada 10 segundos
   useEffect(() => {
-    fetchData();
+    fetchData(); // Chamada inicial
+
+    const intervalId = setInterval(() => {
+      console.log('Atualizando dados do dashboard...');
+      fetchData();
+    }, 10000); // 10 segundos
+
+    // Limpar o intervalo quando o componente for desmontado
+    return () => clearInterval(intervalId);
   }, [dateRange]);
 
-  // Dados para o gráfico (limitar a 8 instâncias)
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    try {
+      const response = await fetch('http://localhost:8182/instance-mapping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao adicionar instância');
+      }
+
+      const result = await response.json();
+      console.log('Instância adicionada:', result);
+      setIsDialogOpen(false);
+      setFormData({ us_at: '', instance_id: '', instance_name: '', token: '' });
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao adicionar instância:', error.message);
+      setFormError(error.message);
+    }
+  };
+
   const chartData = instances.slice(0, 8);
 
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 p-6">
-        <DashboardHeader 
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-        />
+        <div className="flex justify-between items-center mb-6">
+          <DashboardHeader 
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Instância
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Nova Instância</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="us_at">Unidade de Saúde (us_at)</Label>
+                  <Input
+                    id="us_at"
+                    name="us_at"
+                    value={formData.us_at}
+                    onChange={handleFormChange}
+                    placeholder="Ex.: 2"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="instance_id">ID da Instância</Label>
+                  <Input
+                    id="instance_id"
+                    name="instance_id"
+                    value={formData.instance_id}
+                    onChange={handleFormChange}
+                    placeholder="Ex.: 9cb57386-120e-40fb-b112-6c901fa6e00a"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="instance_name">Nome da Instância</Label>
+                  <Input
+                    id="instance_name"
+                    name="instance_name"
+                    value={formData.instance_name}
+                    onChange={handleFormChange}
+                    placeholder="Ex.: TesteWebApp"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="token">Token (API Key)</Label>
+                  <Input
+                    id="token"
+                    name="token"
+                    value={formData.token}
+                    onChange={handleFormChange}
+                    placeholder="Ex.: 3A0C6E4B89B9-4625-8FAB-487529276421"
+                    required
+                  />
+                </div>
+                {formError && <p className="text-red-500">{formError}</p>}
+                <Button type="submit">Adicionar</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
         
         {loading ? (
           <div>Carregando...</div>
@@ -150,7 +259,6 @@ const Index = () => {
           <div>Nenhuma instância encontrada.</div>
         ) : (
           <>
-            {/* Cards de métricas principais */}
             <div className="grid gap-4 grid-cols-1 md:grid-cols-4 mb-6">
               <StatisticCard 
                 title="Total de Instâncias" 
@@ -178,7 +286,6 @@ const Index = () => {
               />
             </div>
             
-            {/* Gráficos */}
             <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
               <InstanceBarChart data={chartData} />
               <SuccessRateChart 
@@ -187,7 +294,6 @@ const Index = () => {
               />
             </div>
             
-            {/* Tabela de instâncias */}
             <InstancesTable data={instances} />
           </>
         )}
