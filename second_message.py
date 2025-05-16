@@ -20,11 +20,11 @@ def send_whatsapp_message(phone, message, instance_name, token):
     payload = {
         "number": phone,
         "text": message,
-        "delay": 5000
+        "delay": 5
     }
     try:
         response = requests.post(API_URL.format(instance_name), json=payload, headers=headers)
-        print(f"Resposta da API para {phone}: {response.status_code} - {response.text}")
+        print(f"Resposta da API para {phone}: {response.status_code}")
         return response.status_code == 201
     except requests.RequestException as e:
         print(f"Erro ao enviar mensagem: {e}")
@@ -36,19 +36,29 @@ def send_second_messages():
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT id, nome_usuario, data_agendamento, horario, nome_profissional, cbo_profissional,
-               razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token,logradouro,complemento_unidade, numero_unidade,municipio, bairro
+        SELECT a.id, a.us_at, a.razao_social, a.nome_profissional, a.cbo_profissional, 
+               a.data_agendamento, a.codigo, a.usuario, a.nome_usuario, a.telefone, 
+               a.telefone_celular, a.telefone_contato, a.motivo_consulta, a.horario, 
+               a.inclusao, a.complemento_unidade, a.numero_unidade, a.municipio, 
+               a.bairro, a.logradouro, a.instance_id, a.first_message_sent, 
+               a.second_message_sent, a.second_message_date, a.data_envio,
+               im.instance_name, im.token
         FROM appointments a
         JOIN instance_mapping im ON a.instance_id = im.instance_id
-        WHERE second_message_date = ? AND second_message_sent = 'PENDENTE'
+        WHERE a.second_message_date = ? AND a.second_message_sent = 'PENDENTE'
     ''', (today,))
     
     appointments = cursor.fetchall()
     
     for appt in appointments:
         (
-            id, nome_usuario, data_agendamento, horario, nome_profissional, cbo_profissional,
-            razao_social, municipio, telefone, telefone_celular, telefone_contato, instance_name, token,logradouro,numero_unidade,bairro
+            id, us_at, razao_social, nome_profissional, cbo_profissional,
+            data_agendamento, codigo, usuario, nome_usuario, telefone,
+            telefone_celular, telefone_contato, motivo_consulta, horario,
+            inclusao, complemento_unidade, numero_unidade, municipio,
+            bairro, logradouro, instance_id, first_message_sent,
+            second_message_sent, second_message_date, data_envio,
+            instance_name, token
         ) = appt
         
         phone = format_phone(telefone_celular) or format_phone(telefone) or format_phone(telefone_contato)
@@ -60,11 +70,11 @@ def send_second_messages():
         
         message = (
             f"Olá, {nome_usuario}, Sou a Assistente Virtual de Agendamentos da Secretaria Municipal de Saúde de Bebedouro.\n\n"
-            f"Lembrete: sua consulta está marcada para {data_agendamento} às {horario} "
-            f"com {nome_profissional.upper()}, {cbo_profissional.upper()}.\n\n"
+            f"Lembrete: sua consulta está marcada para {data_agendamento} às {horario} \n\n"
+            f"Com {nome_profissional.upper()}, {cbo_profissional.upper()}.\n\n"
             f"Podemos confirmar sua presença?\n\n"
             f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
-            f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
+            f"RUA {logradouro.upper()} - {numero_unidade}, {bairro.upper()}, {municipio.upper()}"
         )
         
         second_message_status = 'ENVIADO' if send_whatsapp_message(phone, message, instance_name, token) else 'FALHA'

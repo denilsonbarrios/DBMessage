@@ -154,11 +154,12 @@ def calculate_second_message_date(appointment_date):
     except ValueError:
         return None
 
-def calculate_days_difference(date_str1, date_str2):
+def calculate_days_difference_to_appointment(current_date, appointment_date):
     try:
-        date1_str = date_str1.split(' ')[0]
-        date1 = datetime.strptime(date1_str, "%d/%m/%Y")
-        date2 = datetime.strptime(date_str2, "%d/%m/%Y")
+        # Usar a data atual (current_date) sem hora
+        current_date_str = current_date.strftime("%d/%m/%Y")
+        date1 = datetime.strptime(current_date_str, "%d/%m/%Y")
+        date2 = datetime.strptime(appointment_date, "%d/%m/%Y")
         delta = (date2 - date1).days
         return delta
     except ValueError as e:
@@ -178,7 +179,7 @@ def send_whatsapp_message(phone, message, instance_name, token):
     payload = {
         "number": phone,
         "text": message,
-        "delay": 5000
+        "delay": 5
     }
     try:
         response = requests.post(API_URL.format(instance_name), json=payload, headers=headers)
@@ -211,6 +212,9 @@ def insert_data_to_db(data):
             print(f"Data de agendamento inválida para {item['nome_usuario']}: {item['data_agendamento']}")
             continue
         
+        # Obter a data atual para o cálculo
+        current_date = datetime.now()
+        
         cursor.execute('''
             INSERT OR IGNORE INTO appointments (
                 us_at, razao_social, nome_profissional, cbo_profissional, data_agendamento, codigo,
@@ -227,7 +231,7 @@ def insert_data_to_db(data):
             item['inclusao'], item['complemento_unidade'], item['numero_unidade'],
             item['municipio'], item['bairro'], item['logradouro'],
             instance_id, 'PENDENTE', 'PENDENTE', second_message_date,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            current_date.strftime('%Y-%m-%d %H:%M:%S')
         ))
         
         if cursor.rowcount > 0:
@@ -252,33 +256,33 @@ def insert_data_to_db(data):
                     UPDATE appointments
                     SET first_message_sent = 'FALHA', data_envio = ?
                     WHERE id = ?
-                ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), appt_id))
+                ''', (current_date.strftime('%Y-%m-%d %H:%M:%S'), appt_id))
                 print(f"Telefone inválido para {nome}: {item['telefone_celular']}, {item['telefone_contato']}, {item['telefone']}")
                 conn.commit()
                 continue
             
-            days_difference = calculate_days_difference(item['inclusao'], second_message_date)
+            # Calcular a diferença entre a data atual e a data_agendamento
+            days_difference = calculate_days_difference_to_appointment(current_date, item['data_agendamento'])
             if days_difference is None:
                 print(f"Erro ao calcular diferença de dias para {nome}, enviando primeira mensagem normalmente.")
                 days_difference = 5
             
             if days_difference <= 4:
-                print(f"Inclusão próxima da second_message_date ({days_difference} dias) para {nome}, enviando apenas o lembrete.")
+                print(f"Data de agendamento próxima da data atual ({days_difference} dias) para {nome}, enviando apenas o lembrete.")
                 cursor.execute('''
                     UPDATE appointments
                     SET first_message_sent = 'NÃO ENVIADO', data_envio = ?
                     WHERE id = ?
-                ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), appt_id))
+                ''', (current_date.strftime('%Y-%m-%d %H:%M:%S'), appt_id))
                 conn.commit()
                 
                 mensagem = (
                     f"Olá, {nome}, Sou a Assistente Virtual de Agendamentos da Secretaria Municipal de Saúde de Bebedouro.\n\n"
                     f"Lembrete: sua consulta está marcada para {data} às {horario} \n\n"
-                    f"com {profissional}, {especialidade.upper()}.\n\n"
+                    f"Com {profissional.upper()}, {especialidade.upper()}.\n\n"
                     f"Podemos confirmar sua presença?\n\n"
                     f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
-                    f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
-
+                    f"RUA {logradouro.upper()} - {numero_unidade}, {bairro.upper()}, {municipio.upper()}"
                 )
                 
                 second_message_status = 'ENVIADO' if send_whatsapp_message(formatted_phone, mensagem, instance_name, token) else 'FALHA'
@@ -287,15 +291,15 @@ def insert_data_to_db(data):
                     UPDATE appointments
                     SET second_message_sent = ?, data_envio = ?
                     WHERE id = ?
-                ''', (second_message_status, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), appt_id))
+                ''', (second_message_status, current_date.strftime('%Y-%m-%d %H:%M:%S'), appt_id))
                 print(f"Lembrete (segunda mensagem) para {formatted_phone}: {second_message_status}")
             else:
-                print(f"Inclusão a mais de 4 dias da second_message_date ({days_difference} dias) para {nome}, enviando primeira mensagem.")
+                print(f"Data de agendamento a mais de 4 dias da data atual ({days_difference} dias) para {nome}, enviando primeira mensagem.")
                 mensagem = (
                     f"Olá, {nome}, Sou a Assistente Virtual de Agendamentos da Secretaria Municipal de Saude de Bebedouro.\n\n"
-                    f"Estamos entrando em contato para confirmar o seu agendamento do dia {data} às {horario} com o {profissional}, {especialidade.upper()}.\n\n"
+                    f"Estamos entrando em contato para confirmar o seu agendamento do dia {data} às {horario} com {profissional.upper()}, {especialidade.upper()}.\n\n"
                     f"LOCAL DE ATENDIMENTO: {razao_social} \n\n"
-                    f"RUA {logradouro} - {numero_unidade}, {bairro}, {municipio.upper()}"
+                    f"RUA {logradouro.upper()} - {numero_unidade}, {bairro.upper()}, {municipio.upper()}"
                 )
                 
                 first_message_status = 'ENVIADO' if send_whatsapp_message(formatted_phone, mensagem, instance_name, token) else 'FALHA'
@@ -304,7 +308,7 @@ def insert_data_to_db(data):
                     UPDATE appointments
                     SET first_message_sent = ?, data_envio = ?
                     WHERE id = ?
-                ''', (first_message_status, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), appt_id))
+                ''', (first_message_status, current_date.strftime('%Y-%m-%d %H:%M:%S'), appt_id))
                 print(f"Primeira mensagem para {formatted_phone}: {first_message_status}")
             
             conn.commit()

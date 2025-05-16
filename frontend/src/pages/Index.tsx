@@ -139,7 +139,7 @@ const Index = () => {
     const intervalId = setInterval(() => {
       console.log('Atualizando dados do dashboard...');
       fetchData();
-    }, 10000); // 10 segundos
+    }, 100000); // 10 segundos
 
     // Limpar o intervalo quando o componente for desmontado
     return () => clearInterval(intervalId);
